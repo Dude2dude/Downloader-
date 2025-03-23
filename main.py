@@ -1,73 +1,99 @@
 import os
-import logging
-import requests
+import tempfile
 from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
-
-# Enable logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from pyrogram import Client, filters
+import requests
+import json
 
 # Get environment variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
-# Initialize bot
-bot = Bot(token=BOT_TOKEN)
+# Flask app for webhook
 app = Flask(__name__)
 
-# Set webhook
-def set_webhook():
-    webhook_url = f"{WEBHOOK_URL}/{BOT_TOKEN}"
-    response = bot.set_webhook(webhook_url)
-    if response:
-        logger.info("Webhook set successfully!")
-    else:
-        logger.error("Failed to set webhook!")
+# Pyrogram bot instance
+bot = Client(
+    "PhotoToUrlBot",
+    bot_token=BOT_TOKEN,
+    api_id=API_ID,
+    api_hash=API_HASH
+)
 
-# Start command handler
-def start(update: Update, context: CallbackContext) -> None:
-    logger.info("Received /start command")
-    update.message.reply_text("Send me a video link from Instagram, Facebook, YouTube, or Terabox.")
-
-# Video download handler
-def download_video(update: Update, context: CallbackContext) -> None:
-    message_text = update.message.text
-    logger.info(f"Received message: {message_text}")
-
-    if "youtube.com" in message_text or "youtu.be" in message_text:
-        update.message.reply_text("Downloading YouTube video...")
-
-        # Example API usage (Replace this with a real API)
-        response = requests.get(f"https://some-api.com/download?url={message_text}")
-        
-        if response.status_code == 200:
-            update.message.reply_text("✅ Video downloaded! Sending...")
-            update.message.reply_video(video=response.json()["video_url"])
-        else:
-            update.message.reply_text("❌ Failed to download video. Try another link.")
-
-    elif "instagram.com" in message_text:
-        update.message.reply_text("Instagram downloading is not yet supported.")
-    
-    else:
-        update.message.reply_text("❌ Unsupported link. Please send a valid video URL.")
-
-# Flask webhook route
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+# Set webhook route
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(), bot)
-    logger.info(f"Received update: {update}")
-    dispatcher.process_update(update)
+    update = request.get_json()
+    bot.process_update(update)
     return "OK", 200
 
-# Initialize dispatcher
-dispatcher = Dispatcher(bot, None, workers=0)
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, download_video))
+# Command: /start
+@bot.on_message(filters.command("start"))
+def start(client, message):
+    message.reply_text("👋 Welcome! Send me:\n"
+                       "📷 A photo to get a URL\n"
+                       "📜 HTML code to generate a temporary link\n"
+                       "🔍 Any text to get information.")
 
-# Set webhook on startup
+# Feature 1: Photo to URL
+@bot.on_message(filters.photo)
+def photo_to_url(client, message):
+    photo = message.photo.file_id
+    file_path = client.download_media(photo)
+    
+    # Upload to Telegra.ph
+    with open(file_path, "rb") as file:
+        response = requests.post("https://telegra.ph/upload", files={"file": ("file.jpg", file, "image/jpeg")})
+    
+    if response.status_code == 200:
+        result = response.json()
+        image_url = "https://telegra.ph" + result[0]["src"]
+        message.reply_text(f"🖼 Your image URL: {image_url}")
+    else:
+        message.reply_text("❌ Failed to upload image.")
+    
+    os.remove(file_path)
+
+# Feature 2: Temporary HTML Compiler
+@bot.on_message(filters.text & filters.regex(r"<\s*html.*?>.*?</\s*html\s*>", flags=re.DOTALL))
+def html_to_url(client, message):
+    html_code = message.text
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+    temp_file.write(html_code.encode("utf-8"))
+    temp_file.close()
+
+    # Upload to 0x0.st (a temporary file hosting service)
+    with open(temp_file.name, "rb") as f:
+        response = requests.post("https://0x0.st", files={"file": f})
+
+    if response.status_code == 200:
+        message.reply_text(f"📝 Your HTML link: {response.text}")
+    else:
+        message.reply_text("❌ Failed to create link.")
+
+    os.remove(temp_file.name)
+
+# Feature 3: Get Information About Text
+@bot.on_message(filters.text & ~filters.command(["start"]))
+def text_info(client, message):
+    text = message.text
+    words = len(text.split())
+    chars = len(text)
+
+    message.reply_text(f"📄 Text Info:\n"
+                       f"🔢 Characters: {chars}\n"
+                       f"🔠 Words: {words}")
+
+# Set webhook function
+@bot.on_message(filters.command("setwebhook"))
+def set_webhook(client, message):
+    webhook_url = f"{WEBHOOK_URL}/webhook"
+    bot.set_webhook(webhook_url)
+    message.reply_text(f"✅ Webhook set to: {webhook_url}")
+
+# Run the bot
 if __name__ == "__main__":
-    set_webhook()
+    bot.start()
     app.run(host="0.0.0.0", port=8080)
