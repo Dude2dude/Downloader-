@@ -8,7 +8,7 @@ from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, Ca
 from spotdl import Spotdl
 
 # Telegram Bot Token (Set in Koyeb Environment Variables)
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("7318650217:AAEXr17lLVfhXGBKgnMLgmtYjV1kJ_pAdmQ")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Set this as your Koyeb app URL
 
 bot = Bot(token=BOT_TOKEN)
