@@ -5,10 +5,9 @@ import logging
 from flask import Flask, request
 from telegram import Bot, Update
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
-from spotdl import Spotdl
 
-# Get Environment Variables
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Use environment variable for security
+# Telegram Bot Token (Set in Koyeb Environment Variables)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Set this as your Koyeb app URL
 
 bot = Bot(token=BOT_TOKEN)
@@ -21,12 +20,9 @@ logger = logging.getLogger(__name__)
 # Initialize Dispatcher
 dispatcher = Dispatcher(bot, None, workers=4, use_context=True)
 
-# Initialize Spotify downloader
-spotdl = Spotdl()
-
 # Command: /start
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Send me a video link from Instagram, Facebook, YouTube, Spotify, or Terabox.")
+    update.message.reply_text("Send me a video link from Instagram, Facebook, YouTube, or Terabox.")
 
 # Handle URLs
 def download_video(update: Update, context: CallbackContext) -> None:
@@ -38,8 +34,6 @@ def download_video(update: Update, context: CallbackContext) -> None:
         download_instagram(update, url)
     elif "facebook.com" in url:
         download_facebook(update, url)
-    elif "spotify.com" in url:
-        download_spotify(update, url)
     elif "terabox.com" in url:
         download_terabox(update, url)
     else:
@@ -74,14 +68,6 @@ def download_facebook(update: Update, url: str):
     except Exception as e:
         update.message.reply_text(f"Error downloading Facebook video: {e}")
 
-# Download Spotify Music
-def download_spotify(update: Update, url: str):
-    try:
-        spotdl.download([url])
-        send_video(update, f"{os.path.basename(url)}.mp3")
-    except Exception as e:
-        update.message.reply_text(f"Error downloading Spotify track: {e}")
-
 # Terabox Download (Not Implemented Yet)
 def download_terabox(update: Update, url: str):
     update.message.reply_text("Terabox download is currently not supported.")
@@ -109,7 +95,4 @@ def set_webhook():
 
 if __name__ == "__main__":
     set_webhook()
-    
-    # Change port to 8080 for Koyeb compatibility
-    port = int(os.environ.get("PORT", 8080))  # Default to 8080
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8080)
