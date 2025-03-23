@@ -7,8 +7,8 @@ from telegram import Bot, Update
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
 from spotdl import Spotdl
 
-# Telegram Bot Token (Set in Koyeb Environment Variables)
-BOT_TOKEN = os.getenv("7318650217:AAEXr17lLVfhXGBKgnMLgmtYjV1kJ_pAdmQ")
+# Get Environment Variables
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Use environment variable for security
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Set this as your Koyeb app URL
 
 bot = Bot(token=BOT_TOKEN)
@@ -109,4 +109,7 @@ def set_webhook():
 
 if __name__ == "__main__":
     set_webhook()
-    app.run(host="0.0.0.0", port=5000)
+    
+    # Change port to 8080 for Koyeb compatibility
+    port = int(os.environ.get("PORT", 8080))  # Default to 8080
+    app.run(host="0.0.0.0", port=port)
