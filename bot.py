@@ -8,7 +8,7 @@ import requests
 app = Flask(__name__)
 
 # Replace 'YOUR_TOKEN_HERE' with your bot's token
-TOKEN = 'YOUR_TOKEN_HERE'
+TOKEN = '7318650217:AAEXr17lLVfhXGBKgnMLgmtYjV1kJ_pAdmQ'
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
