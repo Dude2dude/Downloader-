@@ -1,5 +1,5 @@
-Flask==2.2.2
+Flask>=2.2.3
 python-telegram-bot==20.0
-gunicorn==2.2.2
+gunicorn==21.2.0  # Use a valid version
 pytube==12.1.0  # or the latest version
-requests==2.28.1  # for making HTTP requests, if needed
+Werkzeug>=2.2.2  # Ensure compatibility with Flask
